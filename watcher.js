@@ -55,19 +55,43 @@ async function onAARequest(objAARequest, arrResponses) {
 		handleAAResponse(objAAResponse, true)
 }
 
-function handleAAResponse(objAAResponse, bEstimated) {
-	const { aa_address, response: { responseVars } } = objAAResponse;
+async function handleAAResponse(objAAResponse, bEstimated) {
+	const { aa_address, trigger_unit, timestamp, response: { responseVars } } = objAAResponse;
 	if (aa_address === conf.friend_aa && responseVars) {
 		const { event } = responseVars;
 		if (event) {
+			const is_stable = bEstimated ? 0 : 1;
 			const objEvent = JSON.parse(event);
 			console.log('friend event', objEvent);
-			const { type, user1, user2, rewards, followup, days, ghost } = objEvent;
+			const { type } = objEvent;
 			if (type === 'rewards') {
+				const { user1, user2, rewards, followup, days, ghost } = objEvent;
 				notifyAboutRewards(user1, user2, rewards, followup, days, ghost);
+				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, liquid_reward, new_user_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, 0, ?, FROM_UNIXTIME(?))", [user1, trigger_unit, rewards.total_balances.user1 + rewards.user1.locked, rewards.user1.locked, rewards.user1.liquid, rewards.user2.is_new ? rewards.user1.new_user_reward : 0, is_stable, timestamp]);
+				if (!ghost)
+					await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, liquid_reward, new_user_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, 0, ?, FROM_UNIXTIME(?))", [user2, trigger_unit, rewards.total_balances.user2 + rewards.user2.locked, rewards.user2.locked, rewards.user2.liquid, rewards.user1.is_new ? rewards.user2.new_user_reward : 0, is_stable, timestamp]);
+				for (let ref in rewards.referrers) {
+					const reward = rewards.referrers[ref];
+					if (ref === user1 || ref === user2)
+						await db.query("UPDATE user_balances SET referral_reward=?, locked_reward=locked_reward+?, total_balance=total_balance+? WHERE trigger_unit=? AND address=?", [reward, reward, reward, trigger_unit, ref]);
+					else {
+						const [{ total_balance }] = await db.query("SELECT total_balance FROM user_balances WHERE address=? ORDER BY trigger_date DESC LIMIT 1", [ref]);
+						await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, FROM_UNIXTIME(?))", [ref, trigger_unit, total_balance + reward, reward, reward, is_stable, timestamp]);
+					}
+				}
+			}
+			else if (type === 'deposit') {
+				const { owner, total_balance } = objEvent;
+				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, is_stable, trigger_date) VALUES (?, ?, 'deposit', ?, ?, FROM_UNIXTIME(?))", [owner, trigger_unit, total_balance, is_stable, timestamp]);				
+			}
+			else if (type === 'replace' || type === 'withdrawal') {
+				const { address } = objEvent;
+				const vars = bEstimated ? aa_state.getUpcomingAAStateVars(conf.friend_aa) : aa_state.getAAStateVars(conf.friend_aa);
+				const total_balance = await getUserTotalBalance(vars, address);
+				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, is_stable, trigger_date) VALUES (?, ?, ?, ?, ?, FROM_UNIXTIME(?))", [address, trigger_unit, type, total_balance, is_stable, timestamp]);				
 			}
 			else
-				console.log(`not a rewards event`);
+				console.log(`ignored event`);
 		}
 		else
 			console.log(`no event from friends`);
@@ -216,40 +240,40 @@ function getFollowupRewardInfo(elapsed_days, bWithExpiry) {
 	return {};
 }
 
+async function get_deposit_asset_exchange_rate(vars, asset) {
+	const pool = vars['deposit_asset_' + asset];
+	if (!pool)
+		throw Error(`no pool for asset ${asset}`);
+	const params = await dag.readAAParams(pool);
+	const bX = params.x_asset == asset && params.y_asset == 'base';
+	const pool_vars = aa_state.getAAStateVars(pool);
+	const recent = pool_vars.recent;
+	const pmax = Math.max(recent.current.pmax, recent.prev.pmax);
+	const pmin = Math.min(recent.current.pmin, recent.prev.pmin);
+	return bX ? pmin : 1 / pmax;
+}
+
+async function getUserTotalBalance(vars, address) {
+	const user = vars['user_' + address];
+	const ceiling_price = 2 ** ((Date.now() / 1000 - vars.constants.launch_ts) / (365 * 24 * 3600));
+	let total_balance = 0;
+	for (let asset in user.balances) {
+		const bal = user.balances[asset];
+		if (asset === 'frd')
+			total_balance += bal;
+		else if (asset === 'base')
+			total_balance += 0.75 * bal / ceiling_price;
+		else {
+			const rate = await get_deposit_asset_exchange_rate(vars, asset);
+			total_balance += 0.5 * bal * rate / ceiling_price;
+		}
+	}
+	return total_balance;
+}
+
 async function checkForFollowups() {
 	console.log(`checking for followups`);
 	const vars = aa_state.getAAStateVars(conf.friend_aa);
-
-	async function get_deposit_asset_exchange_rate(asset) {
-		const pool = vars['deposit_asset_' + asset];
-		if (!pool)
-			throw Error(`no pool for asset ${asset}`);
-		const params = await dag.readAAParams(pool);
-		const bX = params.x_asset == asset && params.y_asset == 'base';
-		const pool_vars = aa_state.getAAStateVars(pool);
-		const recent = pool_vars.recent;
-		const pmax = Math.max(recent.current.pmax, recent.prev.pmax);
-		const pmin = Math.min(recent.current.pmin, recent.prev.pmin);
-		return bX ? pmin : 1 / pmax;
-	}
-
-	async function getUserTotalBalance(address) {
-		const user = vars['user_' + address];
-		const ceiling_price = 2 ** ((Date.now() / 1000 - vars.constants.launch_ts) / (365 * 24 * 3600));
-		let total_balance = 0;
-		for (let asset in user.balances) {
-			const bal = user.balances[asset];
-			if (asset === 'frd')
-				total_balance += bal;
-			else if (asset === 'base')
-				total_balance += 0.75 * bal / ceiling_price;
-			else {
-				const rate = await get_deposit_asset_exchange_rate(asset);
-				total_balance += 0.5 * bal * rate / ceiling_price;
-			}
-		}
-		return total_balance;
-	}
 
 	for (let name in vars) {
 		const m = name.match(/^friendship_(\w+)_([0-9A-Z]+)$/);
@@ -270,8 +294,8 @@ async function checkForFollowups() {
 				console.log(`${fu_reward_number} followup reward notification already sent to friends ${address1}-${address2}`);
 				continue;
 			}
-			const total_balance1 = getUserTotalBalance(address1);
-			const total_balance2 = getUserTotalBalance(address2);
+			const total_balance1 = getUserTotalBalance(vars, address1);
+			const total_balance2 = getUserTotalBalance(vars, address2);
 			const rewards = {
 				user1: {
 					locked: Math.floor(total_balance1 * 0.01 * friendship.followup_reward_share),

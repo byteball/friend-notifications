@@ -5,7 +5,7 @@ const network = require('ocore/network.js');
 
 const operator = require('aabot/operator.js');
 const watcher = require('./watcher.js');
-//const webserver = require('./webserver/index.js');
+const webserver = require('./webserver/index.js');
 
 
 eventBus.on('headless_wallet_ready', async () => {
@@ -14,7 +14,7 @@ eventBus.on('headless_wallet_ready', async () => {
 	network.start();
 	await watcher.startWatching();
 
-//	webserver.start();
+	webserver.start();
 });
 
 process.on('unhandledRejection', up => {

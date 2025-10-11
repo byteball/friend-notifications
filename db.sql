@@ -5,3 +5,19 @@ CREATE TABLE sent_followup_notifications (
 	creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY (address1, address2)
 );
+
+CREATE TABLE user_balances (
+	address CHAR(32) NOT NULL,
+	trigger_unit CHAR(44) NOT NULL,
+	event VARCHAR(10) NOT NULL,
+	total_balance DOUBLE NOT NULL,
+	locked_reward INT NOT NULL DEFAULT 0,
+	liquid_reward INT NOT NULL DEFAULT 0,
+	new_user_reward INT NOT NULL DEFAULT 0,
+	referral_reward INT NOT NULL DEFAULT 0,
+	is_stable TINYINT NOT NULL DEFAULT 0,
+	trigger_date TIMESTAMP NOT NULL,
+	creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (trigger_unit, address)
+);
+CREATE INDEX byAddressTs ON user_balances(address, trigger_date);
