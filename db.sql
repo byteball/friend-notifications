@@ -6,6 +6,11 @@ CREATE TABLE sent_followup_notifications (
 	PRIMARY KEY (address1, address2)
 );
 
+CREATE TABLE user_ghost (
+    address CHAR(32) NOT NULL PRIMARY KEY,
+    ghost_name VARCHAR(40) DEFAULT NULL
+);
+
 CREATE TABLE user_balances (
 	address CHAR(32) NOT NULL,
 	trigger_unit CHAR(44) NOT NULL,

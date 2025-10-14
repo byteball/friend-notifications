@@ -79,6 +79,11 @@ async function handleAAResponse(objAAResponse, bEstimated) {
 						await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, FROM_UNIXTIME(?))", [ref, trigger_unit, total_balance + reward, reward, reward, is_stable, timestamp]);
 					}
 				}
+
+				if (ghost) {
+					const address = isValidAddress(user2) ? user1 : user2;
+					await db.query("REPLACE INTO user_ghost (address, ghost_name) VALUES(?,?)", [address, null]);
+				}
 			}
 			else if (type === 'deposit') {
 				const { owner, total_balance } = objEvent;

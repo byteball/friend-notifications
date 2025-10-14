@@ -2,12 +2,16 @@ const fastify = require('fastify');
 const cors = require('@fastify/cors');
 const db = require("ocore/db.js");
 const conf = require('ocore/conf.js');
+const { isValidAddress } = require('ocore/validation_utils');
 
 const app = fastify({ logger: false });
 
 
 app.get('/history/:address', async (request, reply) => {
 	const { address } = request.params;
+
+	if (!address || isValidAddress(address) === false)
+		return reply.status(400).send({ error: 'Invalid address' });
 
 	const history = await db.query("SELECT * FROM user_balances WHERE address=? ORDER BY trigger_date", [address]);
 	if (history.length === 0)
@@ -24,6 +28,20 @@ app.get('/history/:address', async (request, reply) => {
 	}
 
 	return history;
+});
+
+app.get('/user-ghost/:address', async (request, reply) => {
+	const { address } = request.params;
+
+	if (!address || !isValidAddress(address))
+		return reply.status(400).send({ error: 'Invalid address' });
+
+	const rows = await db.query("SELECT * FROM user_ghost WHERE address=?", [address]);
+
+	if (rows.length === 0)
+		return reply.status(404).send({ error: 'User not found' });
+
+	return rows[0];
 });
 
 const startWebServer = async () => {
