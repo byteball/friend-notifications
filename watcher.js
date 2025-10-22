@@ -81,7 +81,7 @@ async function handleAAResponse(objAAResponse, bEstimated) {
 				}
 
 				if (ghost) {
-					const address = isValidAddress(user2) ? user1 : user2;
+					const address = isValidAddress(user2) ? user2 : user1;
 					await db.query("REPLACE INTO user_ghost (address, ghost_name) VALUES(?,?)", [address, null]);
 				}
 			}
