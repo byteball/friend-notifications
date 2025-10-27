@@ -32,31 +32,24 @@ module.exports = async (deviceAddress, dataString) => {
             const { signed_message, authors: [{ address: senderWalletAddress }] } = objSignedMessage;
 
             try {
-                const messageSplit = signed_message.trim().split(".");
-
-                const message = messageSplit[0].trim();
+                const message = signed_message.trim();
                 let data = {};
-                
-                if (messageSplit.length > 1) {
-                    const dataArray = messageSplit[1].trim().replace(" And I select ghost: ", "").trim().split(", ");
 
-                    dataArray.forEach(dataItem => {
-                        const dataItemSplit = dataItem.split(":");
-                        data[dataItemSplit[0].trim().replace("And I select ghost", "name")] = dataItemSplit[1].trim();
-                    });
+
+                const dataArray = message.trim().replace("choose ", "").replace(" as ", "_").replace(" future friend", "").trim().split("_");
+
+                data = {
+                    name: dataArray[0],
+                    address: dataArray[1]
+                };
+
+                if (dataArray.length !== 2 || isValidAddress(dataArray[1]) === false) {
+                    return reject({ error: 'Invalid message format' });
+                } else if (data.address !== senderWalletAddress) {
+                    return reject({ error: 'Address in message does not match sender address' });
                 }
 
-                let attestationWalletAddress = data?.address;
-
-                if (message && message.includes('I own the address:')) {
-                    attestationWalletAddress = message.replace('I own the address: ', '').trim();
-
-                    if (!isValidAddress(attestationWalletAddress)) {
-                        return reject({ error: 'Invalid format' });
-                    }
-                }
-
-                return resolve({ message, data, senderWalletAddress, attestationWalletAddress, deviceAddress });
+                return resolve({ message, data, walletAddress: data.address, deviceAddress });
             } catch (err) {
                 console.error('Error in signed message:', err);
                 reject({ error: 'Unknown error! Please try again.' });
