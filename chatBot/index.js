@@ -5,7 +5,7 @@ const { LRUCache } = require('lru-cache');
 
 const { isValidAddress } = require('ocore/validation_utils');
 const aa_state = require('aabot/aa_state.js');
-const getSignedData = require('./utils/getSignedData');
+const getSignedData = require('../utils/getSignedData');
 
 // Cache device address -> selected ghost name
 const deviceAddressToGhostName = new LRUCache({
