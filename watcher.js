@@ -76,7 +76,7 @@ async function handleAAResponse(objAAResponse, bEstimated) {
 						await db.query("UPDATE user_balances SET referral_reward=?, locked_reward=locked_reward+?, total_balance=total_balance+? WHERE trigger_unit=? AND address=?", [reward, reward, reward, trigger_unit, ref]);
 					else {
 						const [{ total_balance }] = await db.query("SELECT total_balance FROM user_balances WHERE address=? ORDER BY trigger_date DESC LIMIT 1", [ref]);
-						await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, FROM_UNIXTIME(?))", [ref, trigger_unit, total_balance + reward, reward, reward, is_stable, timestamp]);
+						await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, datetime(?, 'unixepoch'))", [ref, trigger_unit, total_balance + reward, reward, reward, is_stable, timestamp]);
 					}
 				}
 
