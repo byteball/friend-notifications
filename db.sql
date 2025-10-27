@@ -1,4 +1,4 @@
-CREATE TABLE sent_followup_notifications (
+CREATE TABLE IF NOT EXISTS sent_followup_notifications (
 	address1 VARCHAR(50) NOT NULL,
 	address2 CHAR(32) NOT NULL,
 	reward_number CHAR(4) NOT NULL,
@@ -7,13 +7,13 @@ CREATE TABLE sent_followup_notifications (
 );
 
 -- query separator
-CREATE TABLE user_ghost (
+CREATE TABLE IF NOT EXISTS user_ghost (
     address CHAR(32) NOT NULL PRIMARY KEY,
     ghost_name VARCHAR(40) DEFAULT NULL
 );
 
 -- query separator
-CREATE TABLE user_balances (
+CREATE TABLE IF NOT EXISTS user_balances (
 	address CHAR(32) NOT NULL,
 	trigger_unit CHAR(44) NOT NULL,
 	event VARCHAR(10) NOT NULL,
@@ -28,4 +28,4 @@ CREATE TABLE user_balances (
 	PRIMARY KEY (trigger_unit, address)
 );
 -- query separator
-CREATE INDEX byAddressTs ON user_balances(address, trigger_date);
+CREATE INDEX IF NOT EXISTS byAddressTs ON user_balances(address, trigger_date);
