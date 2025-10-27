@@ -18,9 +18,9 @@ const deviceAddressToGhostName = new LRUCache({
 });
 
 const startChatBot = () => {
-	eventBus.on('paired', async (from_address, ghostName) => {
+	eventBus.on('paired', async (from_address, pairingKey) => {
 		const vars = aa_state.getAAStateVars(conf.friend_aa);
-		[ghostName, address] = ghostName.trim().slice(0, MAX_PAIRING_KEY_LENGTH).split("_"); // max 40 chars + address + 1 for split
+		const [ghostName, address] = pairingKey.trim().slice(0, MAX_PAIRING_KEY_LENGTH).split("_"); // max 40 chars + address + 1 for split
 
 		let device = require('ocore/device');
 
