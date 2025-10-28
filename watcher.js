@@ -67,28 +67,33 @@ async function handleAAResponse(objAAResponse, bEstimated) {
 			if (type === 'rewards') {
 				const { user1, user2, rewards, followup, days, ghost } = objEvent;
 				notifyAboutRewards(user1, user2, rewards, followup, days, ghost);
-				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, liquid_reward, new_user_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, 0, ?, FROM_UNIXTIME(?))", [user1, trigger_unit, rewards.total_balances.user1 + rewards.user1.locked, rewards.user1.locked, rewards.user1.liquid, rewards.user2.is_new ? rewards.user1.new_user_reward : 0, is_stable, timestamp]);
+				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, liquid_reward, new_user_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, 0, ?, datetime(?, 'unixepoch'))", [user1, trigger_unit, rewards.total_balances.user1 + rewards.user1.locked, rewards.user1.locked, rewards.user1.liquid, rewards.user2.is_new ? rewards.user1.new_user_reward : 0, is_stable, timestamp]);
 				if (!ghost)
-					await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, liquid_reward, new_user_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, 0, ?, FROM_UNIXTIME(?))", [user2, trigger_unit, rewards.total_balances.user2 + rewards.user2.locked, rewards.user2.locked, rewards.user2.liquid, rewards.user1.is_new ? rewards.user2.new_user_reward : 0, is_stable, timestamp]);
+					await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, liquid_reward, new_user_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, 0, ?, datetime(?, 'unixepoch'))", [user2, trigger_unit, rewards.total_balances.user2 + rewards.user2.locked, rewards.user2.locked, rewards.user2.liquid, rewards.user1.is_new ? rewards.user2.new_user_reward : 0, is_stable, timestamp]);
 				for (let ref in rewards.referrers) {
 					const reward = rewards.referrers[ref];
 					if (ref === user1 || ref === user2)
 						await db.query("UPDATE user_balances SET referral_reward=?, locked_reward=locked_reward+?, total_balance=total_balance+? WHERE trigger_unit=? AND address=?", [reward, reward, reward, trigger_unit, ref]);
 					else {
 						const [{ total_balance }] = await db.query("SELECT total_balance FROM user_balances WHERE address=? ORDER BY trigger_date DESC LIMIT 1", [ref]);
-						await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, FROM_UNIXTIME(?))", [ref, trigger_unit, total_balance + reward, reward, reward, is_stable, timestamp]);
+						await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, datetime(?, 'unixepoch'))", [ref, trigger_unit, total_balance + reward, reward, reward, is_stable, timestamp]);
 					}
+				}
+
+				if (ghost) {
+					const address = isValidAddress(user2) ? user2 : user1;
+					await db.query("REPLACE INTO user_ghost (address, ghost_name) VALUES(?,?)", [address, null]);
 				}
 			}
 			else if (type === 'deposit') {
 				const { owner, total_balance } = objEvent;
-				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, is_stable, trigger_date) VALUES (?, ?, 'deposit', ?, ?, FROM_UNIXTIME(?))", [owner, trigger_unit, total_balance, is_stable, timestamp]);				
+				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, is_stable, trigger_date) VALUES (?, ?, 'deposit', ?, ?, datetime(?, 'unixepoch'))", [owner, trigger_unit, total_balance, is_stable, timestamp]);
 			}
 			else if (type === 'replace' || type === 'withdrawal') {
 				const { address } = objEvent;
 				const vars = bEstimated ? aa_state.getUpcomingAAStateVars(conf.friend_aa) : aa_state.getAAStateVars(conf.friend_aa);
 				const total_balance = await getUserTotalBalance(vars, address);
-				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, is_stable, trigger_date) VALUES (?, ?, ?, ?, ?, FROM_UNIXTIME(?))", [address, trigger_unit, type, total_balance, is_stable, timestamp]);				
+				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, is_stable, trigger_date) VALUES (?, ?, ?, ?, ?, datetime(?, 'unixepoch'))", [address, trigger_unit, type, total_balance, is_stable, timestamp]);
 			}
 			else
 				console.log(`ignored event`);
