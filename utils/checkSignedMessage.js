@@ -51,7 +51,7 @@ module.exports = async (deviceAddress, dataString) => {
                 return reject({ error: 'address in message does not match sender address' });
             }
 
-            return resolve({ message: msg, data, walletAddress: senderWalletAddress });
+            return resolve();
         });
     });
 }
