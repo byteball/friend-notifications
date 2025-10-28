@@ -43,8 +43,6 @@ module.exports = async (deviceAddress, dataString) => {
                 return reject({ error: 'signed message does not match expected message' });
             }
 
-            const data = { name: ghostName, address: senderWalletAddress };
-
             if (!ghostName || !isValidAddress(senderWalletAddress)) {
                 return reject({ error: 'invalid message format' });
             } else if (expectedWalletAddress !== senderWalletAddress) {
