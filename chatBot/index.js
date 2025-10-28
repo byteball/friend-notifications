@@ -14,7 +14,7 @@ const startChatBot = () => {
 		const vars = aa_state.getAAStateVars(conf.friend_aa);
 		const [ghostName, address] = pairingKey.trim().slice(0, MAX_PAIRING_KEY_LENGTH).split("_"); // max 40 chars + address + 1 for split
 
-		let device = require('ocore/device');
+		const device = require('ocore/device');
 
 		if (isValidAddress(ghostName)) return device.sendMessageToDevice(from_address, 'text', 'Invalid ghost name');
 		if (!isValidAddress(address)) return device.sendMessageToDevice(from_address, 'text', 'Invalid wallet address');
