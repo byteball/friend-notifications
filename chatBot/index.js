@@ -4,7 +4,7 @@ const db = require("ocore/db.js");
 
 const { isValidAddress } = require('ocore/validation_utils');
 const aa_state = require('aabot/aa_state.js');
-const getSignedData = require('../utils/getSignedData');
+const checkSignedMessage = require('../utils/checkSignedMessage');
 const deviceToGhostAndAddress = require('./cache.js');
 
 const MAX_PAIRING_KEY_LENGTH = 73;
@@ -47,7 +47,7 @@ const startChatBot = () => {
 
 		if (text.trim().startsWith("[Signed message]") && ghostName && address) {
 			try {
-				await getSignedData(from_address, text);
+				await checkSignedMessage(from_address, text);
 			} catch (error) {
 				console.error('Error getting signed data:', error);
 				return device.sendMessageToDevice(from_address, 'text', "Failed to retrieve signed data: " + (error?.error || ""));
