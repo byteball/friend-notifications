@@ -38,7 +38,7 @@ const startChatBot = () => {
 
 		let device = require('ocore/device');
 
-		const { ghostName, address } = deviceToGhostAndAddress.get(from_address) || {};
+		const { ghostName, address } = (deviceToGhostAndAddress.get(from_address) || {});
 
 		if (!ghostName) return device.sendMessageToDevice(from_address, 'text', 'Please select a ghost name on the website first.');
 
