@@ -39,7 +39,7 @@ const startChatBot = () => {
 	eventBus.on('text', async (from_address, text) => {
 		text = text.trim();
 
-		let device = require('ocore/device');
+		const device = require('ocore/device');
 
 		const { ghostName, address } = (deviceToGhostAndAddress.get(from_address) || {});
 
