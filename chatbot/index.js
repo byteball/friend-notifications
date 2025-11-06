@@ -12,7 +12,7 @@ const MAX_PAIRING_KEY_LENGTH = 73;
 const startChatBot = () => {
 	eventBus.on('paired', async (from_address, pairingKey) => {
 		const vars = aa_state.getAAStateVars(conf.friend_aa);
-		const [ghostName, address] = pairingKey.trim().slice(0, MAX_PAIRING_KEY_LENGTH).split("_"); // max 40 chars + address + 1 for split
+		const [ghostName, address] = decodeURIComponent(pairingKey).trim().slice(0, MAX_PAIRING_KEY_LENGTH).split("_"); // max 40 chars + address + 1 for split
 
 		const device = require('ocore/device');
 
