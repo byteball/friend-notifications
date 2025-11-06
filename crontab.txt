@@ -1,1 +1,0 @@
-*/20 * * * * cd friend-notifications; node check_daemon.js 1>>~/.config/friend-notifications/check_daemon.log 2>>~/.config/friend-notifications/check_daemon.err
