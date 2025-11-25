@@ -67,16 +67,21 @@ async function handleAAResponse(objAAResponse, bEstimated) {
 			if (type === 'rewards') {
 				const { user1, user2, rewards, followup, days, ghost } = objEvent;
 				notifyAboutRewards(user1, user2, rewards, followup, days, ghost);
-				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, liquid_reward, new_user_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, 0, ?, datetime(?, 'unixepoch'))", [user1, trigger_unit, rewards.total_balances.user1 + rewards.user1.locked, rewards.user1.locked, rewards.user1.liquid, rewards.user2.is_new ? rewards.user1.new_user_reward : 0, is_stable, timestamp]);
-				if (!ghost)
-					await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, liquid_reward, new_user_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, 0, ?, datetime(?, 'unixepoch'))", [user2, trigger_unit, rewards.total_balances.user2 + rewards.user2.locked, rewards.user2.locked, rewards.user2.liquid, rewards.user1.is_new ? rewards.user2.new_user_reward : 0, is_stable, timestamp]);
+				const total_balance1_with_reducers = rewards.total_balances.user1.with_reducers + rewards.user1.locked;
+				const total_balance1_sans_reducers = rewards.total_balances.user1.sans_reducers + rewards.user1.locked;
+				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance_with_reducers, total_balance_sans_reducers, locked_reward, liquid_reward, new_user_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, ?, 0, ?, datetime(?, 'unixepoch'))", [user1, trigger_unit, total_balance1_with_reducers, total_balance1_sans_reducers, rewards.user1.locked, rewards.user1.liquid, rewards.user2.is_new ? rewards.user1.new_user_reward : 0, is_stable, timestamp]);
+				if (!ghost) {
+					const total_balance2_with_reducers = rewards.total_balances.user2.with_reducers + rewards.user2.locked;
+					const total_balance2_sans_reducers = rewards.total_balances.user2.sans_reducers + rewards.user2.locked;
+					await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance_with_reducers, total_balance_sans_reducers, locked_reward, liquid_reward, new_user_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, ?, 0, ?, datetime(?, 'unixepoch'))", [user2, trigger_unit, total_balance2_with_reducers, total_balance2_sans_reducers, rewards.user2.locked, rewards.user2.liquid, rewards.user1.is_new ? rewards.user2.new_user_reward : 0, is_stable, timestamp]);
+				}
 				for (let ref in rewards.referrers) {
 					const reward = rewards.referrers[ref];
 					if (ref === user1 || ref === user2)
-						await db.query("UPDATE user_balances SET referral_reward=?, locked_reward=locked_reward+?, total_balance=total_balance+? WHERE trigger_unit=? AND address=?", [reward, reward, reward, trigger_unit, ref]);
+						await db.query("UPDATE user_balances SET referral_reward=?, locked_reward=locked_reward+?, total_balance_with_reducers=total_balance_with_reducers+?, total_balance_sans_reducers=total_balance_sans_reducers+? WHERE trigger_unit=? AND address=?", [reward, reward, reward, reward, trigger_unit, ref]);
 					else {
-						const [{ total_balance }] = await db.query("SELECT total_balance FROM user_balances WHERE address=? ORDER BY trigger_date DESC LIMIT 1", [ref]);
-						await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, locked_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, datetime(?, 'unixepoch'))", [ref, trigger_unit, total_balance + reward, reward, reward, is_stable, timestamp]);
+						const [{ total_balance_with_reducers, total_balance_sans_reducers }] = await db.query("SELECT total_balance_with_reducers, total_balance_sans_reducers FROM user_balances WHERE address=? ORDER BY trigger_date DESC LIMIT 1", [ref]);
+						await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance_with_reducers, total_balance_sans_reducers, locked_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, ?, datetime(?, 'unixepoch'))", [ref, trigger_unit, total_balance_with_reducers + reward, reward, total_balance_sans_reducers + reward, reward, is_stable, timestamp]);
 					}
 				}
 
@@ -88,14 +93,15 @@ async function handleAAResponse(objAAResponse, bEstimated) {
 			else if (type === 'deposit') {
 				const { owner, total_balance: total_balance_sans_reducers } = objEvent;
 				const vars = bEstimated ? aa_state.getUpcomingAAStateVars(conf.friend_aa) : aa_state.getAAStateVars(conf.friend_aa);
-				const total_balance = await getUserTotalBalance(vars, owner);
-				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, is_stable, trigger_date) VALUES (?, ?, 'deposit', ?, ?, datetime(?, 'unixepoch'))", [owner, trigger_unit, total_balance, is_stable, timestamp]);
+				const total_balance_with_reducers = await getUserTotalBalance(vars, owner);
+				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance_with_reducers, total_balance_sans_reducers, is_stable, trigger_date) VALUES (?, ?, 'deposit', ?, ?, ?, datetime(?, 'unixepoch'))", [owner, trigger_unit, total_balance_with_reducers, total_balance_sans_reducers, is_stable, timestamp]);
 			}
 			else if (type === 'replace' || type === 'withdrawal') {
 				const { address } = objEvent;
 				const vars = bEstimated ? aa_state.getUpcomingAAStateVars(conf.friend_aa) : aa_state.getAAStateVars(conf.friend_aa);
-				const total_balance = await getUserTotalBalance(vars, address);
-				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance, is_stable, trigger_date) VALUES (?, ?, ?, ?, ?, datetime(?, 'unixepoch'))", [address, trigger_unit, type, total_balance, is_stable, timestamp]);
+				const total_balance_with_reducers = await getUserTotalBalance(vars, address, true);
+				const total_balance_sans_reducers = await getUserTotalBalance(vars, address, false);
+				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance_with_reducers, total_balance_sans_reducers, is_stable, trigger_date) VALUES (?, ?, ?, ?, ?, ?, datetime(?, 'unixepoch'))", [address, trigger_unit, type, total_balance_with_reducers, total_balance_sans_reducers, is_stable, timestamp]);
 			}
 			else
 				console.log(`ignored event`);
@@ -260,7 +266,7 @@ async function get_deposit_asset_exchange_rate(vars, asset) {
 	return bX ? pmin : 1 / pmax;
 }
 
-async function getUserTotalBalance(vars, address) {
+async function getUserTotalBalance(vars, address, bWithReducers = true) {
 	const user = vars['user_' + address];
 	const ceiling_price = 2 ** ((Date.now() / 1000 - vars.constants.launch_ts) / (365 * 24 * 3600));
 	let total_balance = 0;
@@ -269,10 +275,10 @@ async function getUserTotalBalance(vars, address) {
 		if (asset === 'frd')
 			total_balance += bal;
 		else if (asset === 'base')
-			total_balance += 0.75 * bal / ceiling_price;
+			total_balance += (bWithReducers ? 0.75 : 1) * bal / ceiling_price;
 		else {
 			const rate = await get_deposit_asset_exchange_rate(vars, asset);
-			total_balance += 0.5 * bal * rate / ceiling_price;
+			total_balance += (bWithReducers ? 0.5 : 1) * bal * rate / ceiling_price;
 		}
 	}
 	return total_balance;
