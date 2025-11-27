@@ -91,9 +91,10 @@ async function handleAAResponse(objAAResponse, bEstimated) {
 				}
 			}
 			else if (type === 'deposit') {
-				const { owner, total_balance: total_balance_sans_reducers } = objEvent;
+				const { owner, total_balance: incomplete_total_balance_sans_reducers } = objEvent;
 				const vars = bEstimated ? aa_state.getUpcomingAAStateVars(conf.friend_aa) : aa_state.getAAStateVars(conf.friend_aa);
-				const total_balance_with_reducers = await getUserTotalBalance(vars, owner);
+				const total_balance_with_reducers = await getUserTotalBalance(vars, owner, true);
+				const total_balance_sans_reducers = await getUserTotalBalance(vars, address, false);
 				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance_with_reducers, total_balance_sans_reducers, is_stable, trigger_date) VALUES (?, ?, 'deposit', ?, ?, ?, datetime(?, 'unixepoch'))", [owner, trigger_unit, total_balance_with_reducers, total_balance_sans_reducers, is_stable, timestamp]);
 			}
 			else if (type === 'replace' || type === 'withdrawal') {
