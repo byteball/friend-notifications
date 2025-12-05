@@ -254,7 +254,7 @@ function getFollowupRewardInfo(elapsed_days, bWithExpiry) {
 	return {};
 }
 
-async function get_deposit_asset_exchange_rate(vars, asset) {
+async function get_deposit_asset_exchange_rate(vars, asset, bRetrying) {
 	const pool = vars['deposit_asset_' + asset];
 	if (!pool)
 		throw Error(`no pool for asset ${asset}`);
@@ -262,6 +262,10 @@ async function get_deposit_asset_exchange_rate(vars, asset) {
 	const bX = params.x_asset == asset && params.y_asset == 'base';
 	const pool_vars = aa_state.getAAStateVars(pool);
 	const recent = pool_vars.recent;
+	if (!recent && !bRetrying) {
+		await aa_state.followAA(pool);
+		return await get_deposit_asset_exchange_rate(vars, asset, true);
+	}
 	const pmax = Math.max(recent.current.pmax, recent.prev.pmax);
 	const pmin = Math.min(recent.current.pmin, recent.prev.pmin);
 	return bX ? pmin : 1 / pmax;
