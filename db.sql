@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS sent_followup_notifications (
 );
 
 -- query separator
-CREATE TABLE IF NOT EXISTS user_ghost (
+CREATE TABLE IF NOT EXISTS user_ghosts (
     address CHAR(32) NOT NULL PRIMARY KEY,
     ghost_name VARCHAR(40) DEFAULT NULL
 );
