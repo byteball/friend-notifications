@@ -8,6 +8,7 @@
   "dependencies": {
     "@fastify/cors": "^11.0.1",
     "aabot": "git+https://github.com/byteball/aabot.git",
+    "cron": "^4.4.0",
     "discord.js": "^14.16.3",
     "fastify": "^5.4.0",
     "lru-cache": "^11.2.2",
