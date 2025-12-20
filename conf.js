@@ -38,7 +38,7 @@ exports.lib_aas = [
 	'ASXH57GPNWI5FO5KJWJWLRMVZTXBRKJX', // oswap v2 pool-lib-by-price
 ];
 
-exports.friend_aa = process.env.testnet ? 'GOP6M6NJ3DM4UQD6DNTUTM424YKPMTED' : 'FRDO54EC4GI6DKEGHU6MWL3JGPXHNEKM';
+exports.friend_aa = process.env.testnet ? 'GOP6M6NJ3DM4UQD6DNTUTM424YKPMTED' : 'FRDOT24PXLEY4BRGC7WPMSKXUWUFMUMG';
 
 exports.attestors = process.env.testnet
 	? {
