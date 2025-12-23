@@ -92,7 +92,7 @@ async function handleAAResponse(objAAResponse, bEstimated) {
 				}
 			}
 			else if (type === 'deposit') {
-				const { owner, total_balance: incomplete_total_balance_sans_reducers } = objEvent;
+				const { owner } = objEvent;
 				const vars = bEstimated ? aa_state.getUpcomingAAStateVars(conf.friend_aa) : aa_state.getAAStateVars(conf.friend_aa);
 				const total_balance_with_reducers = await getUserTotalBalance(vars, owner, true);
 				const total_balance_sans_reducers = await getUserTotalBalance(vars, owner, false);
@@ -313,8 +313,8 @@ async function checkForFollowups() {
 				console.log(`${fu_reward_number} followup reward notification already sent to friends ${address1}-${address2}`);
 				continue;
 			}
-			const total_balance1 = getUserTotalBalance(vars, address1);
-			const total_balance2 = getUserTotalBalance(vars, address2);
+			const total_balance1 = await getUserTotalBalance(vars, address1);
+			const total_balance2 = await getUserTotalBalance(vars, address2);
 			const rewards = {
 				user1: {
 					locked: Math.floor(total_balance1 * 0.01 * friendship.followup_reward_share),
@@ -411,17 +411,17 @@ async function remindAboutStreaks() {
 			if (!isValidAddress(address)) // ghost
 				continue;
 			const user = vars[name];
-			const { total_streak, current_steak, current_ghost_num, last_date } = user;
+			const { total_streak, current_streak, current_ghost_num, last_date } = user;
 			if (last_date === yesterday)
-				users.push({ address, total_streak, current_steak, current_ghost_num });
+				users.push({ address, total_streak, current_streak, current_ghost_num });
 		}
 	}	
 	users.sort((a, b) => b.total_streak - a.total_streak);
-	for (let { address, total_streak, current_steak, current_ghost_num } of users) {
+	for (let { address, total_streak, current_streak, current_ghost_num } of users) {
 		const required_streak = (current_ghost_num + 1) ** 2;
 		const [row] = await db.query("SELECT ghost_name FROM user_ghosts WHERE address=?", [address]);
 		const ghost_name = row ? row.ghost_name : null;
-		const getText = (mention) => `${mention} remember to continue your ${total_streak}-day streak today${ghost_name ? `, as well as your current ${current_steak}-out-of-${required_streak}-day streak to become friends with ${ghost_name}` : ''}. Only 6 hours left in UTC day to find a new friend and keep your streak alive!`;
+		const getText = (mention) => `${mention} remember to continue your ${total_streak}-day streak today${ghost_name ? `, as well as your current ${current_streak}-out-of-${required_streak}-day streak to become friends with ${ghost_name}` : ''}. Only 6 hours left in UTC day to find a new friend and keep your streak alive!`;
 		const usernames = await getUsernames(address);
 		if (usernames.discord)
 			await sendDiscordMessage(channel, getText(await formatDiscordMention(guild, usernames.discord)));
