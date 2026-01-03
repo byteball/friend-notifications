@@ -421,7 +421,7 @@ async function remindAboutStreaks() {
 		const required_streak = (current_ghost_num + 1) ** 2;
 		const [row] = await db.query("SELECT ghost_name FROM user_ghosts WHERE address=?", [address]);
 		const ghost_name = row ? row.ghost_name : null;
-		const getText = (mention) => `${mention} remember to continue your ${total_streak}-day streak today${ghost_name ? `, as well as your current ${current_streak}-out-of-${required_streak}-day streak to become friends with ${ghost_name}` : ''}. Only 6 hours left in UTC day to find a new friend and keep your streak alive!`;
+		const getText = (mention) => `${mention} remember to continue your ${total_streak}-day streak today${ghost_name ? `, as well as your current ${current_streak}-out-of-${required_streak}-day streak to become friends with ${ghost_name}` : ''}. Only 10 hours left in UTC day to find a new friend and keep your streak alive!`;
 		const usernames = await getUsernames(address);
 		if (usernames.discord)
 			await sendDiscordMessage(channel, getText(await formatDiscordMention(guild, usernames.discord)));
@@ -484,7 +484,7 @@ async function startWatching() {
 	
 	await waitForUnprocessedAddresses(); // for update attestors history
 
-	const job = new CronJob('0 0 18 * * *', remindAboutStreaks, null, true, 'utc'); // at 18:00 UTC every day
+	const job = new CronJob('0 0 14 * * *', remindAboutStreaks, null, true, 'utc'); // at 14:00 UTC every day
 
 	await checkForFollowups();
 	setInterval(checkForFollowups, 12 * 3600_000);
