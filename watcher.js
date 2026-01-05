@@ -389,7 +389,7 @@ async function notifyAboutRewards(user1, user2, rewards, followup, days, ghost) 
 			return (
 				ghost
 					? `${mention1} you've just become friends with the ghost of ${user2} after completing your ${required_streak}-day streak, congratulations! You receive ${rewards.user1.locked / 1e9} FRD to your locked account and ${rewards.user1.liquid / 1e9} liquid FRD.`
-					: `${both} you've just become friends and claimed your rewards, congratulations! ${mention1} receives ${getRewardText(rewards.user1, rewards.referrers[user1])}. ${mention2} receives ${getRewardText(rewards.user2, rewards.referrers[user2])}.`
+					: `${both} you've just become friends and claimed your rewards, congratulations! ${mention1} receives ${getRewardText(rewards.user1, rewards.referrers?.[user1])}. ${mention2} receives ${getRewardText(rewards.user2, rewards.referrers?.[user2])}.`
 			) + ` The first follow-up reward will be available in 60 days.`;
 		}
 	};
