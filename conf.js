@@ -34,6 +34,7 @@ exports.explicitStart = true;
 exports.webserverPort = 3050;
 
 exports.lib_aas = [
+	'TU54DXPXLYIMRMKYURIIEYHVMBDBKOCD', //rewards AA
 	'5GG2PDVJ555WEUFGNPX55W2Z2T4P6BG5', // oswap v2 pool-lib
 	'ASXH57GPNWI5FO5KJWJWLRMVZTXBRKJX', // oswap v2 pool-lib-by-price
 ];
