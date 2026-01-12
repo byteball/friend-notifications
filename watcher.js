@@ -67,7 +67,6 @@ async function handleAAResponse(objAAResponse, bEstimated) {
 			const { type } = objEvent;
 			if (type === 'rewards') {
 				const { user1, user2, rewards, followup, days, ghost } = objEvent;
-				notifyAboutRewards(user1, user2, rewards, followup, days, ghost);
 				const total_balance1_with_reducers = rewards.total_balances.user1.with_reducers + rewards.user1.locked;
 				const total_balance1_sans_reducers = rewards.total_balances.user1.sans_reducers + rewards.user1.locked;
 				await db.query("REPLACE INTO user_balances (address, trigger_unit, event, total_balance_with_reducers, total_balance_sans_reducers, locked_reward, liquid_reward, new_user_reward, referral_reward, is_stable, trigger_date) VALUES (?, ?, 'rewards', ?, ?, ?, ?, ?, 0, ?, datetime(?, 'unixepoch'))", [user1, trigger_unit, total_balance1_with_reducers, total_balance1_sans_reducers, rewards.user1.locked, rewards.user1.liquid, rewards.user2.is_new ? rewards.user1.new_user_reward : 0, is_stable, timestamp]);
@@ -90,6 +89,8 @@ async function handleAAResponse(objAAResponse, bEstimated) {
 					const address = isValidAddress(user2) ? user2 : user1;
 					await db.query("REPLACE INTO user_ghosts (address, ghost_name) VALUES(?,?)", [address, null]);
 				}
+				
+				notifyAboutRewards(user1, user2, rewards, followup, days, ghost);
 			}
 			else if (type === 'deposit') {
 				const { owner } = objEvent;
