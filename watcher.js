@@ -17,6 +17,8 @@ const aa_state = require('aabot/aa_state.js');
 const discordInstance = require('./discordInstance');
 const telegramInstance = require('./telegramInstance');
 
+const getCurrentUserGhost = require('./utils/get-current-user-ghost');
+
 const website = 'https://friend.obyte.org';
 
 const followup_reward_days = [
@@ -89,7 +91,7 @@ async function handleAAResponse(objAAResponse, bEstimated) {
 					const address = isValidAddress(user2) ? user2 : user1;
 					await db.query("REPLACE INTO user_ghosts (address, ghost_name) VALUES(?,?)", [address, null]);
 				}
-				
+
 				notifyAboutRewards(user1, user2, rewards, followup, days, ghost);
 			}
 			else if (type === 'deposit') {
@@ -119,12 +121,12 @@ async function getDiscordChannelAndGuild() {
 	const channel = await discordInstance.channels.fetch(conf.DISCORD_CHANNEL_ID);
 	if (!channel)
 		throw Error(`failed to get discord channel`);
-		
+
 	const guild = channel.guild;
 	if (!guild) throw Error('server not found');
-	
+
 	await guild.members.fetch();
-	
+
 	return { channel, guild };
 }
 
@@ -133,7 +135,7 @@ async function sendDiscordMessage(channel, content) {
 		content,
 		allowedMentions: { parse: ['users'] }
 	});
-	
+
 	return true;
 }
 
@@ -165,8 +167,8 @@ async function notify(address1, address2, getText) {
 		await sendDiscordMessage(channel, getText(mentions[address1].discord, mentions[address2].discord));
 		bSent = true;
 	}
-	
-	if (usernames[address1].telegram && usernames[address2].telegram) {		
+
+	if (usernames[address1].telegram && usernames[address2].telegram) {
 		await telegramInstance.sendMessage(getText(mentions[address1].telegram, mentions[address2].telegram));
 		bSent = true;
 	}
@@ -227,7 +229,7 @@ async function getUsernames(address) {
 
 async function loadLibs() {
 	for (let address of conf.lib_aas) {
-	//	await dag.loadAA(address);
+		//	await dag.loadAA(address);
 		const definition = await dag.readAADefinition(address);
 		const payload = { address, definition };
 		await storage.insertAADefinitions(db, [payload], constants.GENESIS_UNIT, 0, false);
@@ -416,14 +418,14 @@ async function remindAboutStreaks() {
 			if (last_date === yesterday)
 				users.push({ address, total_streak, current_streak, current_ghost_num });
 		}
-	}	
+	}
 	users.sort((a, b) => b.total_streak - a.total_streak);
 	for (let { address, total_streak, current_streak, current_ghost_num } of users) {
 		const required_streak = (current_ghost_num + 1) ** 2;
-		const [row] = await db.query("SELECT ghost_name FROM user_ghosts WHERE address=?", [address]);
-		const ghost_name = row ? row.ghost_name : null;
-		const getText = (mention) => `${mention} remember to continue your ${total_streak}-day streak today${ghost_name ? `, as well as your current ${current_streak}-out-of-${required_streak}-day streak to become friends with ${ghost_name}` : ''}. Only 10 hours left in UTC day to find a new friend and keep your streak alive!`;
+		const ghostName = await getCurrentUserGhost(vars, address);
+		const getText = (mention) => `${mention} remember to continue your ${total_streak}-day streak today${ghostName ? `, as well as your current ${current_streak}-out-of-${required_streak}-day streak to become friends with ${ghostName}` : ''}. Only 10 hours left in UTC day to find a new friend and keep your streak alive!`;
 		const usernames = await getUsernames(address);
+
 		if (usernames.discord)
 			await sendDiscordMessage(channel, getText(await formatDiscordMention(guild, usernames.discord)));
 		if (usernames.telegram)
@@ -467,7 +469,7 @@ async function startWatching() {
 
 	await discordInstance.login(conf.DISCORD_BOT_TOKEN);
 	await telegramInstance.startBot();
-	
+
 	eventBus.on("aa_request_applied", onAARequest);
 	eventBus.on("aa_response", onAAResponse);
 
@@ -482,7 +484,7 @@ async function startWatching() {
 	walletGeneral.addWatchedAddress(conf.friend_aa);
 
 	initAsset();
-	
+
 	await waitForUnprocessedAddresses(); // for update attestors history
 
 	const job = new CronJob('0 0 14 * * *', remindAboutStreaks, null, true, 'utc'); // at 14:00 UTC every day
