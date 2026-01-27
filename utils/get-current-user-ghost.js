@@ -17,10 +17,6 @@ async function getCurrentUserGhost(vars, address) {
 	const userGhostFriends = friends.filter(f => !isValidAddress(f));
 	const ghostFriendsIds = userGhostFriends.map(f => allGhosts.findIndex(g => g.name === f));
 	const ghostIndex = getNumberByAddress(address, allGhosts.length - 1, ghostFriendsIds);
-
-	if (ghostIndex < 0) {
-		console.error("Unknown ghost. Please add it to ghost-list.js file")
-	}
 	
 	return allGhosts[ghostIndex]?.name || null;
 }
