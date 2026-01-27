@@ -18,7 +18,11 @@ async function getCurrentUserGhost(vars, address) {
 	const ghostFriendsIds = userGhostFriends.map(f => allGhosts.findIndex(g => g.name === f));
 	const ghostIndex = getNumberByAddress(address, allGhosts.length - 1, ghostFriendsIds);
 	
-	return allGhosts[ghostIndex]?.name || null;
+	const currentGhost = allGhosts[ghostIndex];
+
+	if (!currentGhost) throw new Error("No ghost found for address " + address);
+	
+	return currentGhost.name;
 }
 
 module.exports = getCurrentUserGhost;
