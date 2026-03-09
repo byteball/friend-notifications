@@ -343,6 +343,7 @@ async function checkForFollowups() {
 			await notify(address1, address2, getText);
 			await db.query("INSERT INTO sent_followup_notifications (address1, address2, reward_number) VALUES (?,?,?)", [address1, address2, fu_reward_number]);
 			console.log(`notified ${address1}-${address2} about the ${fu_reward_number} followup reward`);
+			await sleep(30_000);
 		}
 	}
 	console.log(`done checking for followups`);
