@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS sent_followup_notifications (
 	address2 CHAR(32) NOT NULL,
 	reward_number CHAR(4) NOT NULL,
 	creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	PRIMARY KEY (address1, address2)
+	PRIMARY KEY (address1, address2, reward_number)
 );
 
 -- query separator
