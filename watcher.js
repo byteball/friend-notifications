@@ -125,8 +125,6 @@ async function getDiscordChannelAndGuild() {
 	const guild = channel.guild;
 	if (!guild) throw Error('server not found');
 
-	await guild.members.fetch();
-
 	return { channel, guild };
 }
 
@@ -140,7 +138,8 @@ async function sendDiscordMessage(channel, content) {
 }
 
 async function formatDiscordMention(guild, username) {
-	const discordMember = guild.members.cache.find(m => m.user.username === username);
+	const matches = await guild.members.search({ query: username, limit: 10 });
+	const discordMember = matches.find(m => m.user.username === username);
 	return discordMember ? `<@${discordMember.user.id}>` : '@' + username;
 }
 
