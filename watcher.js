@@ -137,7 +137,9 @@ async function sendDiscordMessage(channel, content) {
 	return true;
 }
 
-async function formatDiscordMention(guild, username) {
+async function formatDiscordMention(guild, username, userId) {
+	if (userId)
+		return `<@${userId}>`;
 	const matches = await guild.members.search({ query: username, limit: 10 });
 	const discordMember = matches.find(m => m.user.username === username);
 	return discordMember ? `<@${discordMember.user.id}>` : '@' + username;
@@ -154,9 +156,9 @@ async function notify(address1, address2, getText) {
 	const { channel, guild } = await getDiscordChannelAndGuild();
 	let mentions = {};
 	for (let address in usernames) {
-		const { discord, telegram } = usernames[address];
+		const { discord, discordId, telegram } = usernames[address];
 		mentions[address] = {
-			discord: discord ? await formatDiscordMention(guild, discord) : `telegram user @${telegram}`,
+			discord: discord ? await formatDiscordMention(guild, discord, discordId) : `telegram user @${telegram}`,
 			telegram: telegram ? await telegramInstance.formatTagUser(telegram) : `discord user @${discord}`,
 		};
 	}
@@ -211,8 +213,11 @@ async function getUsernames(address) {
 				continue;
 			}
 
-			if (!usernames[service] && field === 'username') // the later attestation has precedence
+			if (!usernames[service] && field === 'username') { // the later attestation has precedence
 				usernames[service] = value;
+				if (service === 'discord' && profile.userId) // absent in legacy attestations
+					usernames.discordId = profile.userId;
+			}
 		}
 	}
 
@@ -427,7 +432,7 @@ async function remindAboutStreaks() {
 		const usernames = await getUsernames(address);
 
 		if (usernames.discord)
-			await sendDiscordMessage(channel, getText(await formatDiscordMention(guild, usernames.discord)));
+			await sendDiscordMessage(channel, getText(await formatDiscordMention(guild, usernames.discord, usernames.discordId)));
 		if (usernames.telegram)
 			await telegramInstance.sendMessage(getText(await telegramInstance.formatTagUser(usernames.telegram)));
 		console.log(`reminded ${address} about their ${total_streak}-day streak`);
